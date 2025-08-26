@@ -10,7 +10,7 @@
     "build"
   ],
   "scripts": {
-    "build": "tsc && chmod +x build/index.js",
+    "build": "tsc",
     "prepare": "npm run build",
     "start": "node build/index.js",
     "dev": "tsc && node build/index.js",
