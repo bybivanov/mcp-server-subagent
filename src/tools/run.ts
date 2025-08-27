@@ -4,6 +4,7 @@ import { spawn } from "child_process";
 import { createWriteStream } from "fs";
 import { v4 as uuidv4 } from "uuid";
 import { SubagentConfig } from "./schemas.js"; // Import SubagentConfig
+import { ensureSubagentDirectory, validateGeminiPromptFile } from "./subagentDirectory.js";
 
 // Run a subagent and return the run ID
 export async function runSubagent(
@@ -20,6 +21,31 @@ export async function runSubagent(
   const logFile = join(logDir, `${runId}.log`);
   const metadataFile = join(logDir, `${runId}.meta.json`);
   const promptFile = join(logDir, `${runId}.prompt.md`);
+
+  // Determine the working directory for the subagent
+  let subagentWorkingDir = cwd; // Default fallback to original cwd
+  
+  if (subagent.subagentDirectory) {
+    try {
+      // Ensure the subagent directory exists
+      console.error(`Setting up subagent directory: ${subagent.subagentDirectory}`);
+      subagentWorkingDir = await ensureSubagentDirectory(subagent.subagentDirectory);
+      
+      // Validate GEMINI.md file exists (log warning if missing, but continue)
+      const hasGeminiFile = await validateGeminiPromptFile(subagent.subagentDirectory);
+      if (!hasGeminiFile) {
+        console.error(`Warning: GEMINI.md file not found in ${subagent.subagentDirectory}. Subagent will run with default Gemini behavior.`);
+      }
+      
+      console.error(`Subagent ${subagent.name} will execute from directory: ${subagentWorkingDir}`);
+    } catch (error) {
+      console.error(`Failed to setup subagent directory ${subagent.subagentDirectory}: ${error}`);
+      console.error(`Falling back to original working directory: ${cwd}`);
+      // Continue with original cwd as fallback
+    }
+  } else {
+    console.error(`No subagentDirectory specified for ${subagent.name}, using default working directory: ${cwd}`);
+  }
 
   // Construct the prompt
   const toolName = "update_subagent_status";
@@ -46,13 +72,13 @@ Instructions are the following:
   const args = subagent.getArgs();
 
   // Prepare shell pipeline: cat <promptFile> | <command> <args...>
-  const shellCommand = "sh";
-  const shellArgs = [
-    "-c",
-    `cat "${promptFile}" | ${command} ${args
-      .map((a) => `"${a.replace(/"/g, '\\"')}"`)
-      .join(" ")}`,
-  ];
+  // Use cross-platform shell command
+  const isWindows = process.platform === 'win32';
+  const shellCommand = isWindows ? "cmd" : "sh";
+  const catCommand = isWindows ? "type" : "cat";
+  const shellArgs = isWindows 
+    ? ["/c", `${catCommand} "${promptFile}" | ${command} ${args.join(" ")}`]
+    : ["-c", `${catCommand} "${promptFile}" | ${command} ${args.map((a) => `"${a.replace(/"/g, '\\"')}"`).join(" ")}`];
 
   // Create log file stream for real-time logging
   const logStream = createWriteStream(logFile, { flags: "a" });
@@ -61,7 +87,7 @@ Instructions are the following:
   const metadata = {
     runId,
     agentName: subagent.name,
-    command: `cat "${promptFile}" | ${command} ${args.join(" ")}`,
+    command: `${catCommand} "${promptFile}" | ${command} ${args.join(" ")}`,
     startTime: new Date().toISOString(),
     status: "running",
     exitCode: null,
@@ -74,13 +100,14 @@ Instructions are the following:
   try {
     // Log the command being executed (for debugging)
     console.error(
-      `Executing: cat "${promptFile}" | ${command} ${args.join(" ")}`,
+      `Executing: ${catCommand} "${promptFile}" | ${command} ${args.join(" ")}`,
     );
+    console.error(`Working directory: ${subagentWorkingDir}`);
 
     // Use spawn for the shell pipeline
     const childProcess = spawn(shellCommand, shellArgs, {
       stdio: ["ignore", "pipe", "pipe"],
-      cwd: cwd,
+      cwd: subagentWorkingDir,
       env: {
         ...process.env,
         NO_COLOR: "1",
@@ -95,7 +122,10 @@ Instructions are the following:
       } with input: ${input}\n`,
     );
     logStream.write(
-      `[${new Date().toISOString()}] Command: cat "${promptFile}" | ${command} ${args.join(
+      `[${new Date().toISOString()}] Working directory: ${subagentWorkingDir}\n`,
+    );
+    logStream.write(
+      `[${new Date().toISOString()}] Command: ${catCommand} "${promptFile}" | ${command} ${args.join(
         " ",
       )}\n`,
     );

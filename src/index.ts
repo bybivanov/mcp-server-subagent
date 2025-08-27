@@ -63,27 +63,30 @@ export const mcpConfig = {
 
 // Define the subagent configuration
 export const SUBAGENTS: Record<string, SubagentConfig> = {
-  q: {
-    name: "q",
-    command: "q",
-    getArgs: () => ["chat", "--trust-all-tools", "--no-interactive"],
-    description: "Run a query through the Amazon Q CLI",
+  "code-assistant": {
+    name: "code-assistant",
+    command: "gemini",
+    getArgs: () => ["chat", "--interactive"],
+    description: "A general-purpose coding assistant powered by Gemini. Excels at code generation, debugging, refactoring, and explaining complex programming concepts. Ideal for general development tasks, code reviews, and technical problem-solving.",
+    subagentDirectory: "subagents/code-assistant",
+    specialization: "General coding and development tasks"
   },
-  claude: {
-    name: "claude",
-    command: "claude",
-    getArgs: () => [
-      "--print",
-      "--verbose",
-      "--output-format",
-      "stream-json",
-      "--allowedTools",
-      "Bash(git*),Bash(make*),Bash(just*),Bash(gh*),Bash(npm*),Bash(node*),Bash(go*),Bash,Edit,Write,mcp__subagent__update_subagent_status,mcp__subagent__ask_parent,mcp__subagent__check_message_status",
-      "--mcp-config",
-      JSON.stringify(mcpConfig),
-    ],
-    description: "Run a query through the Claude CLI",
+  "test-specialist": {
+    name: "test-specialist", 
+    command: "gemini",
+    getArgs: () => ["chat", "--interactive"],
+    description: "A testing specialist powered by Gemini. Focuses on writing comprehensive test suites, test-driven development, mocking strategies, and testing best practices. Perfect for creating unit tests, integration tests, and test automation.",
+    subagentDirectory: "subagents/test-specialist",
+    specialization: "Testing and test automation"
   },
+  "documentation-writer": {
+    name: "documentation-writer",
+    command: "gemini",
+    getArgs: () => ["chat", "--interactive"],
+    description: "A documentation specialist powered by Gemini. Specializes in creating clear, comprehensive documentation, API docs, README files, and technical writing. Excellent for improving code documentation and creating user guides.",
+    subagentDirectory: "subagents/documentation-writer",
+    specialization: "Documentation and technical writing"
+  }
   // test and test_fail agents will be removed from here and added in tests
 };
 

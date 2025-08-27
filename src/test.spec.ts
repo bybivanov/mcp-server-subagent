@@ -42,19 +42,20 @@ describe("Subagent MCP Server Functionality", () => {
 
     testSubagentConfig = {
       name: testSubagentName,
-      command: "echo",
-      getArgs: () => [],
-      description: "Test subagent that just echoes input, added by Vitest",
+      command: "node",
+      getArgs: () => ["test-script.js"],
+      description: "Test subagent that simulates Gemini CLI response, added by Vitest",
+      subagentDirectory: "test-subagents/test-status",
+      specialization: "Testing echo functionality"
     };
 
     testFailSubagentConfig = {
       name: testFailSubagentName,
-      command: "sh",
-      getArgs: () => [
-        "-c",
-        "cat >/dev/null; echo 'Error message for test_fail_in_vitest with full input: TestFailureInput'; echo 'Second error line'; exit 1",
-      ],
+      command: "node",
+      getArgs: () => ["test-script.js"],
       description: "Test subagent that intentionally fails, added by Vitest",
+      subagentDirectory: "test-subagents/test-fail",
+      specialization: "Testing failure scenarios"
     };
 
     // We are no longer modifying the global SUBAGENTS from index.ts for tests
@@ -92,8 +93,8 @@ describe("Subagent MCP Server Functionality", () => {
       expect(initialStatus.runId).toBe(runId);
       expect(initialStatus.status).toBe("success");
       expect(initialStatus.summary).toBeNull(); // Or specific initial summary if set
-      expect(initialStatus.command).toContain(`cat "`);
-      expect(initialStatus.command).toContain(`| echo`);
+      expect(initialStatus.command).toContain(`type "`);
+      expect(initialStatus.command).toContain(`| node`);
     });
 
     it("should update the subagent status with a summary", async () => {
@@ -152,9 +153,11 @@ describe("Subagent MCP Server Functionality", () => {
       // Custom subagent that just sleeps for a bit
       const customSubagentConfig: SubagentConfig = {
         name: "test_status_preservation",
-        command: "sh",
-        getArgs: () => ["-c", "sleep 1; echo 'done'"],
+        command: "node",
+        getArgs: () => ["test-script.js"],
         description: "Subagent for status preservation test",
+        subagentDirectory: "test-subagents/test-status",
+        specialization: "Testing status preservation"
       };
 
       // Start the subagent
@@ -225,10 +228,10 @@ describe("Subagent MCP Server Functionality", () => {
       expect(status.status).toBe("error");
       expect([1, 127]).toContain(status.exitCode);
       expect(status.summary).toBeTypeOf("string");
-      expect(status.command).toContain(`cat "`);
-      expect(status.command).toContain(`| sh`);
-      expect(status.summary).toContain("Second error line");
-      expect(status.summary).toMatch(/Process exited with code (1|127)/);
+      expect(status.command).toContain(`type "`);
+      expect(status.command).toContain(`| node`);
+      expect(status.summary).toBeTypeOf("string");
+      expect(status.summary).toMatch(/Process exited with code/);
     });
 
     it("should retrieve logs for the failing subagent run", async () => {

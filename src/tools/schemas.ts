@@ -3,9 +3,20 @@ import { z } from "zod";
 export interface SubagentConfig {
   name: string;
   command: string;
-  getArgs: (...args: any[]) => string[];
+  getArgs: () => string[];
   description: string;
+  subagentDirectory: string;
+  specialization: string;
 }
+
+export const SubagentConfigSchema = z.object({
+  name: z.string().min(1, "Subagent name cannot be empty"),
+  command: z.string().min(1, "Command cannot be empty"),
+  getArgs: z.function().returns(z.array(z.string())),
+  description: z.string().min(1, "Description cannot be empty"),
+  subagentDirectory: z.string().min(1, "Subagent directory path cannot be empty"),
+  specialization: z.string().min(1, "Specialization cannot be empty"),
+});
 
 export const RunSubagentArgumentsSchema = z.object({
   input: z.string().min(1, "Input cannot be empty"),
