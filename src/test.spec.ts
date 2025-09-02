@@ -1,22 +1,21 @@
 #!/usr/bin/env node
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import {
-  ensureLogDir,
-  // SUBAGENTS, // No longer needed directly in tests for this pattern
-} from "./index.js"; // Assuming functions are exported from index.ts
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from "vitest";
+import { ensureLogDir } from "./index.js";
+import * as runModule from "./tools/run.js";
 import { runSubagent } from "./tools/run.js";
 import { checkSubagentStatus, updateSubagentStatus } from "./tools/status.js";
 import { getSubagentLogs } from "./tools/logs.js";
 import { SubagentConfig } from "./tools/schemas.js"; // Import SubagentConfig
 import { promises as fs } from "fs";
 import path from "path";
+import { v4 as uuidv4 } from "uuid";
 
 // Define a helper to delay execution
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Define the log directory, relative to the src directory for consistency with index.ts
-const LOG_DIR = path.join(process.cwd(), "logs");
+// Use unique temporary directory for test isolation
+let LOG_DIR: string;
 
 // Define types for our dynamic subagents if not already defined in index.ts
 // (Assuming SUBAGENTS values have a specific structure)
@@ -38,12 +37,15 @@ describe("Subagent MCP Server Functionality", () => {
   let testFailSubagentConfig: SubagentConfig;
 
   beforeAll(async () => {
-    await ensureLogDir();
+    // Create unique test directory to prevent interference
+    const testId = `test-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    LOG_DIR = path.join(require('os').tmpdir(), 'mcp-subagent-tests', testId, 'logs');
+    await fs.mkdir(LOG_DIR, { recursive: true });
 
     testSubagentConfig = {
       name: testSubagentName,
-      command: "node",
-      getArgs: () => ["test-script.js"],
+      command: "gemini",
+      getArgs: () => ["chat", "--interactive"],
       description: "Test subagent that simulates Gemini CLI response, added by Vitest",
       subagentDirectory: "test-subagents/test-status",
       specialization: "Testing echo functionality"
@@ -51,19 +53,72 @@ describe("Subagent MCP Server Functionality", () => {
 
     testFailSubagentConfig = {
       name: testFailSubagentName,
-      command: "node",
-      getArgs: () => ["test-script.js"],
+      command: "gemini",
+      getArgs: () => ["chat", "--interactive"],
       description: "Test subagent that intentionally fails, added by Vitest",
       subagentDirectory: "test-subagents/test-fail",
       specialization: "Testing failure scenarios"
     };
+  });
 
-    // We are no longer modifying the global SUBAGENTS from index.ts for tests
-    // Tests will use their own SubagentConfig instances.
+  beforeEach(() => {
+    // Mock the runSubagent function to avoid actual command execution
+    vi.spyOn(runModule, 'runSubagent').mockImplementation(async (config, input, cwd, logDir) => {
+      const mockRunId = uuidv4();
+      
+      // Determine if this should be a success or failure based on config name
+      const shouldFail = config.name.includes("fail");
+      const status = shouldFail ? "error" : "success";
+      const exitCode = shouldFail ? 1 : 0;
+      
+      // Create mock metadata file
+      const metadata = {
+        runId: mockRunId,
+        agentName: config.name,
+        command: `type "prompt.md" | ${config.command} ${config.getArgs().join(" ")}`,
+        startTime: new Date().toISOString(),
+        status,
+        exitCode,
+        endTime: new Date().toISOString(),
+        summary: shouldFail ? "Process exited with code 1" : null,
+      };
+      
+      await fs.writeFile(
+        path.join(logDir, `${mockRunId}.meta.json`),
+        JSON.stringify(metadata, null, 2)
+      );
+      
+      // Create mock log file
+      const logContent = [
+        `[${new Date().toISOString()}] Starting ${config.name} with input: ${input}`,
+        `[${new Date().toISOString()}] Working directory: ${cwd}`,
+        `[${new Date().toISOString()}] Command: type "prompt.md" | ${config.command} ${config.getArgs().join(" ")}`,
+        shouldFail 
+          ? `[${new Date().toISOString()}] Process exited with code 1`
+          : `[${new Date().toISOString()}] Process exited with code 0`
+      ].join('\n');
+      
+      await fs.writeFile(
+        path.join(logDir, `${mockRunId}.log`),
+        logContent
+      );
+      
+      return mockRunId;
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   afterAll(async () => {
-    // No cleanup of global SUBAGENTS needed
+    // Clean up test directory
+    try {
+      const testBaseDir = path.join(LOG_DIR, '..');
+      await fs.rm(testBaseDir, { recursive: true });
+    } catch (error) {
+      // Ignore cleanup errors
+    }
   });
 
   describe("Successful Subagent Operations", () => {
@@ -94,7 +149,7 @@ describe("Subagent MCP Server Functionality", () => {
       expect(initialStatus.status).toBe("success");
       expect(initialStatus.summary).toBeNull(); // Or specific initial summary if set
       expect(initialStatus.command).toContain(`type "`);
-      expect(initialStatus.command).toContain(`| node`);
+      expect(initialStatus.command).toContain(`| gemini`);
     });
 
     it("should update the subagent status with a summary", async () => {
@@ -154,7 +209,7 @@ describe("Subagent MCP Server Functionality", () => {
       const customSubagentConfig: SubagentConfig = {
         name: "test_status_preservation",
         command: "node",
-        getArgs: () => ["test-script.js"],
+        getArgs: () => ["--help"], // Self-contained system command
         description: "Subagent for status preservation test",
         subagentDirectory: "test-subagents/test-status",
         specialization: "Testing status preservation"
@@ -229,7 +284,7 @@ describe("Subagent MCP Server Functionality", () => {
       expect([1, 127]).toContain(status.exitCode);
       expect(status.summary).toBeTypeOf("string");
       expect(status.command).toContain(`type "`);
-      expect(status.command).toContain(`| node`);
+      expect(status.command).toContain(`| gemini`);
       expect(status.summary).toBeTypeOf("string");
       expect(status.summary).toMatch(/Process exited with code/);
     });

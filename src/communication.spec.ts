@@ -1,8 +1,9 @@
 // communication.spec.ts - Vitest tests for bi-directional communication tools
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { promises as fs } from "fs";
 import { join } from "path";
+import { tmpdir } from "os";
 import { v4 as uuidv4 } from "uuid";
 import { askParentHandler } from "./tools/askParent.js";
 import { replySubagentHandler } from "./tools/replySubagent.js";
@@ -15,7 +16,9 @@ describe("Bi-directional Communication", () => {
 
   beforeEach(async () => {
     testRunId = uuidv4();
-    testLogsDir = "logs";
+    // Create unique test directory to prevent interference
+    const testId = `comm-test-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    testLogsDir = join(tmpdir(), 'mcp-subagent-tests', testId, 'logs');
     testMetaPath = join(testLogsDir, `${testRunId}.meta.json`);
 
     // Create test logs directory
@@ -32,12 +35,15 @@ describe("Bi-directional Communication", () => {
   });
 
   afterEach(async () => {
-    // Clean up test files
+    // Clean up entire test directory tree
     try {
-      await fs.unlink(testMetaPath);
+      const testBaseDir = join(testLogsDir, '..');
+      await fs.rm(testBaseDir, { recursive: true });
     } catch (error) {
       // Ignore cleanup errors
     }
+    // Restore all mocks
+    vi.restoreAllMocks();
   });
 
   describe("ask_parent", () => {

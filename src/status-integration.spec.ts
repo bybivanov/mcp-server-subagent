@@ -13,13 +13,23 @@ describe("Status handling integration", () => {
 
   beforeEach(async () => {
     runId = uuidv4();
-    logDir = "logs";
+    // Create unique test directory to prevent interference
+    const testId = `status-test-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    logDir = path.join(require('os').tmpdir(), 'mcp-subagent-tests', testId, 'logs');
     await fs.ensureDir(logDir);
     metaPath = path.join(logDir, `${runId}.meta.json`);
   });
 
   afterEach(async () => {
-    await fs.remove(metaPath);
+    // Clean up entire test directory tree
+    try {
+      const testBaseDir = path.join(logDir, '..');
+      await fs.remove(testBaseDir);
+    } catch (error) {
+      // Ignore cleanup errors
+    }
+    // Restore all mocks
+    vi.restoreAllMocks();
   });
 
   describe("checkSubagentStatus function", () => {

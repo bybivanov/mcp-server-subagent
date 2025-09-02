@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm test)",
+      "Read(C:\\c\\Users\\Bobby\\Projects\\mcp-server-subagent/**)",
+      "Read(C:\\c\\Users\\Bobby\\Projects\\mcp-server-subagent/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -1,6 +1,6 @@
 // mcp-handler.spec.ts - Tests for MCP tool handler output formatting
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { v4 as uuidv4 } from "uuid";
 import fs from "fs-extra";
 import path from "path";
@@ -94,13 +94,23 @@ describe("MCP status handler output formatting", () => {
 
   beforeEach(async () => {
     runId = uuidv4();
-    logDir = "logs";
+    // Create unique test directory to prevent interference
+    const testId = `mcp-handler-test-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    logDir = path.join(require('os').tmpdir(), 'mcp-subagent-tests', testId, 'logs');
     await fs.ensureDir(logDir);
     metaPath = path.join(logDir, `${runId}.meta.json`);
   });
 
   afterEach(async () => {
-    await fs.remove(metaPath);
+    // Clean up entire test directory tree
+    try {
+      const testBaseDir = path.join(logDir, '..');
+      await fs.remove(testBaseDir);
+    } catch (error) {
+      // Ignore cleanup errors
+    }
+    // Restore all mocks
+    vi.restoreAllMocks();
   });
 
   describe("Basic status formatting", () => {

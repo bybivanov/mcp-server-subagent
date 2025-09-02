@@ -3,15 +3,22 @@ import { ensureSubagentDirectory, validateGeminiPromptFile } from "./subagentDir
 import fs from "fs-extra";
 import { promises as fsPromises } from "fs";
 import { join } from "path";
+import { tmpdir } from "os";
 
 describe("subagentDirectory utilities", () => {
-  const testBaseDir = "test-subagents";
-  const testSubagentDir = join(testBaseDir, "test-agent");
-  const testGeminiFile = join(testSubagentDir, "GEMINI.md");
+  let testBaseDir: string;
+  let testSubagentDir: string;
+  let testGeminiFile: string;
 
   beforeEach(async () => {
-    // Clean up any existing test directories
-    await fs.remove(testBaseDir);
+    // Create unique test directory for this test run to prevent interference
+    const testId = `subagent-test-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    testBaseDir = join(tmpdir(), 'mcp-subagent-tests', testId);
+    testSubagentDir = join(testBaseDir, "test-agent");
+    testGeminiFile = join(testSubagentDir, "GEMINI.md");
+    
+    // Ensure clean test directory
+    await fs.ensureDir(testBaseDir);
     // Restore all mocks before each test
     vi.restoreAllMocks();
   });
@@ -96,17 +103,16 @@ describe("subagentDirectory utilities", () => {
     });
 
     it("should return absolute path for relative directory paths", async () => {
-      const relativePath = "relative/test/path";
+      const relativePath = join(testBaseDir, "relative/test/path");
       const result = await ensureSubagentDirectory(relativePath);
       
-      expect(result).toContain(process.cwd());
+      expect(result).toContain(testBaseDir);
       expect(result).toContain("relative");
       expect(result).toContain("test");
       expect(result).toContain("path");
       expect(await fs.pathExists(relativePath)).toBe(true);
       
-      // Clean up
-      await fs.remove("relative");
+      // No manual cleanup needed - handled in afterEach
     });
   });
 
