@@ -14,7 +14,9 @@
     "prepare": "npm run build",
     "start": "node build/index.js",
     "dev": "tsc && node build/index.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "format": "prettier --write . --ignore-path .gitignore",
+    "lint": "prettier --check . && eslint . --ignore-pattern .gitignore"
   },
   "keywords": [
     "mcp",
@@ -40,7 +42,13 @@
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.15.21",
     "@types/uuid": "^10.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.42.0",
+    "@typescript-eslint/parser": "^8.42.0",
+    "eslint": "^9.34.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
     "fs-extra": "^11.3.0",
+    "prettier": "^3.6.2",
     "typescript": "^5.8.3",
     "vitest": "^3.1.4"
   },

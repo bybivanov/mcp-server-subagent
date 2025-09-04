@@ -6,7 +6,6 @@ import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import {
   MetaFileContentSchema,
-  CommunicationMessageSchema,
 } from "./schemas.js";
 
 export const AskParentInputSchema = z.object({
