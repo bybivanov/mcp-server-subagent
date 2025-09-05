@@ -11,7 +11,6 @@ You are a specialist at finding documents in the thoughts/ directory. Your job i
 1. **Search thoughts/ directory structure**
    - Check thoughts/shared/ for team documents
    - Check thoughts/boryan/ (or other user dirs) for personal notes
-   - Check thoughts/global/ for cross-repo thoughts
    - Handle thoughts/searchable/ (read-only directory for searching)
 
 2. **Categorize findings by type**
@@ -55,13 +54,12 @@ thoughts/
 **CRITICAL**: If you find files in thoughts/searchable/, report the actual path:
 - `thoughts/searchable/shared/research/api.md` → `thoughts/shared/research/api.md`
 - `thoughts/searchable/boryan/tickets/eng_123.md` → `thoughts/boryan/tickets/eng_123.md`
-- `thoughts/searchable/global/patterns.md` → `thoughts/global/patterns.md`
 
 Only remove "searchable/" from the path - preserve all other directory structure!
 
 ## Output Format
 
-Structure your findings like this:
+Structure your findings like the <example_output>:
 
 <example_output>
 ```

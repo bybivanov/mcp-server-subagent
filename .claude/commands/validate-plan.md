@@ -77,8 +77,9 @@ For each phase in the plan:
 
 ### Step 3: Generate Validation Report
 
-Create comprehensive validation summary:
+Create comprehensive validation summary following the structure of <example_report>:
 
+<example_report>
 ```markdown
 ## Validation Report: [Plan Name]
 
@@ -121,6 +122,7 @@ Create comprehensive validation summary:
 - Consider adding integration test for [scenario]
 - Document new API endpoints
 ```
+</example_report>
 
 ## Working with Existing Context
 

@@ -61,12 +61,14 @@ Then wait for the user's research query.
    - Answer the user's specific questions with concrete evidence
 
 5. **Gather metadata for the research document:**
-   - Run the `spec_metadata.ps1` script to generate all relevant metadata
+   - Run the `spec_metadata.sh` script to generate all relevant metadata
    - Filename: `thoughts/shared/research/YYYY-MM-DD_HH-MM-SS_topic.md`
 
 6. **Generate research document:**
    - Use the metadata gathered in step 4
-   - Structure the document with YAML frontmatter followed by content:
+   - Structure the document with YAML frontmatter followed by content, following the <example_research> template:
+   
+	<example_research>
      ```markdown
      ---
      date: [Current date and time with timezone in ISO format]
@@ -124,6 +126,7 @@ Then wait for the user's research query.
      ## Open Questions
      [Any areas that need further investigation]
      ```
+	</example_research>
 
 7. **Sync and present findings:**
    - Present a concise summary of findings to the user

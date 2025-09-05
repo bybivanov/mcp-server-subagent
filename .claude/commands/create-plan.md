@@ -159,8 +159,9 @@ Once aligned on approach:
 After structure approval:
 
 1. **Write the plan** to `thoughts/shared/plans/{descriptive_name}.md`
-2. **Use this template structure**:
+2. **Use the <template_structure>**:
 
+<template_structure>
 ```markdown
 # [Feature/Task Name] Implementation Plan
 
@@ -251,6 +252,7 @@ After structure approval:
 - Original ticket: `thoughts/boryan/tickets/eng_XXXX.md`
 - Related research: `thoughts/shared/research/[relevant].md`
 ```
+</template_structure>
 
 ### Step 5: Sync and Review
 

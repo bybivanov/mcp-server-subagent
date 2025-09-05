@@ -54,7 +54,7 @@ First, think deeply about the most effective search patterns for the requested f
 
 ## Output Format
 
-Structure your findings like this:
+Structure your findings like the <example_output>:
 
 <example_output>
 ```

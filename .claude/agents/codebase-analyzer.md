@@ -48,7 +48,7 @@ You are a specialist at understanding HOW code works. Your job is to analyze imp
 
 ## Output Format
 
-Structure your analysis like this:
+Structure your analysis like the <example_output>:
 
 <example_output>
 ```
