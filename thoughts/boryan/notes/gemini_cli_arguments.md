@@ -1,0 +1,68 @@
+# Command-Line Arguments
+
+Arguments passed directly when running the CLI can override other configurations for that specific session.
+
+- **`--model <model_name>`** (**`-m <model_name>`**):
+  - Specifies the Gemini model to use for this session.
+  - Example: `npm start -- --model gemini-1.5-pro-latest`
+- **`--prompt <your_prompt>`** (**`-p <your_prompt>`**):
+  - Used to pass a prompt directly to the command. This invokes Gemini CLI in a non-interactive mode.
+- **`--prompt-interactive <your_prompt>`** (**`-i <your_prompt>`**):
+  - Starts an interactive session with the provided prompt as the initial input.
+  - The prompt is processed within the interactive session, not before it.
+  - Cannot be used when piping input from stdin.
+  - Example: `gemini -i "explain this code"`
+- **`--sandbox`** (**`-s`**):
+  - Enables sandbox mode for this session.
+- **`--sandbox-image`**:
+  - Sets the sandbox image URI.
+- **`--debug`** (**`-d`**):
+  - Enables debug mode for this session, providing more verbose output.
+- **`--all-files`** (**`-a`**):
+  - If set, recursively includes all files within the current directory as context for the prompt.
+- **`--help`** (or **`-h`**):
+  - Displays help information about command-line arguments.
+- **`--show-memory-usage`**:
+  - Displays the current memory usage.
+- **`--yolo`**:
+  - Enables YOLO mode, which automatically approves all tool calls.
+- **`--approval-mode <mode>`**:
+  - Sets the approval mode for tool calls. Available modes:
+    - `default`: Prompt for approval on each tool call (default behavior)
+    - `auto_edit`: Automatically approve edit tools (replace, write_file) while prompting for others
+    - `yolo`: Automatically approve all tool calls (equivalent to `--yolo`)
+  - Cannot be used together with `--yolo`. Use `--approval-mode=yolo` instead of `--yolo` for the new unified approach.
+  - Example: `gemini --approval-mode auto_edit`
+- **`--allowed-tools <tool1,tool2,...>`**:
+  - A comma-separated list of tool names that will bypass the confirmation dialog.
+  - Example: `gemini --allowed-tools "ShellTool(git status)"`
+- **`--telemetry`**:
+  - Enables [telemetry](../telemetry.md).
+- **`--telemetry-target`**:
+  - Sets the telemetry target. See [telemetry](../telemetry.md) for more information.
+- **`--telemetry-otlp-endpoint`**:
+  - Sets the OTLP endpoint for telemetry. See [telemetry](../telemetry.md) for more information.
+- **`--telemetry-otlp-protocol`**:
+  - Sets the OTLP protocol for telemetry (`grpc` or `http`). Defaults to `grpc`. See [telemetry](../telemetry.md) for more information.
+- **`--telemetry-log-prompts`**:
+  - Enables logging of prompts for telemetry. See [telemetry](../telemetry.md) for more information.
+- **`--checkpointing`**:
+  - Enables [checkpointing](../checkpointing.md).
+- **`--extensions <extension_name ...>`** (**`-e <extension_name ...>`**):
+  - Specifies a list of extensions to use for the session. If not provided, all available extensions are used.
+  - Use the special term `gemini -e none` to disable all extensions.
+  - Example: `gemini -e my-extension -e my-other-extension`
+- **`--list-extensions`** (**`-l`**):
+  - Lists all available extensions and exits.
+- **`--proxy`**:
+  - Sets the proxy for the CLI.
+  - Example: `--proxy http://localhost:7890`.
+- **`--include-directories <dir1,dir2,...>`**:
+  - Includes additional directories in the workspace for multi-directory support.
+  - Can be specified multiple times or as comma-separated values.
+  - 5 directories can be added at maximum.
+  - Example: `--include-directories /path/to/project1,/path/to/project2` or `--include-directories /path/to/project1 --include-directories /path/to/project2`
+- **`--screen-reader`**:
+  - Enables screen reader mode for accessibility.
+- **`--version`**:
+  - Displays the version of the CLI.

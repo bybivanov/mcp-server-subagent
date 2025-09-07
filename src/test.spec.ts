@@ -63,19 +63,19 @@ describe("Subagent MCP Server Functionality", () => {
 
   beforeEach(() => {
     // Mock the runSubagent function to avoid actual command execution
-    vi.spyOn(runModule, 'runSubagent').mockImplementation(async (config, input, cwd, logDir) => {
+    vi.spyOn(runModule, 'runSubagent').mockImplementation(async (input, projectDirectory, subagentName, model, logDir) => {
       const mockRunId = uuidv4();
       
-      // Determine if this should be a success or failure based on config name
-      const shouldFail = config.name.includes("fail");
+      // Determine if this should be a success or failure based on subagent name
+      const shouldFail = subagentName.includes("fail");
       const status = shouldFail ? "error" : "success";
       const exitCode = shouldFail ? 1 : 0;
       
       // Create mock metadata file
       const metadata = {
         runId: mockRunId,
-        agentName: config.name,
-        command: `type "prompt.md" | ${config.command} ${config.getArgs().join(" ")}`,
+        agentName: subagentName,
+        command: `type "prompt.md" | gemini --model ${model} --include-directories ${projectDirectory}`,
         startTime: new Date().toISOString(),
         status,
         exitCode,
@@ -90,9 +90,9 @@ describe("Subagent MCP Server Functionality", () => {
       
       // Create mock log file
       const logContent = [
-        `[${new Date().toISOString()}] Starting ${config.name} with input: ${input}`,
-        `[${new Date().toISOString()}] Working directory: ${cwd}`,
-        `[${new Date().toISOString()}] Command: type "prompt.md" | ${config.command} ${config.getArgs().join(" ")}`,
+        `[${new Date().toISOString()}] Starting ${subagentName} with input: ${input}`,
+        `[${new Date().toISOString()}] Working directory: ${projectDirectory}`,
+        `[${new Date().toISOString()}] Command: type "prompt.md" | gemini --model ${model} --include-directories ${projectDirectory}`,
         shouldFail 
           ? `[${new Date().toISOString()}] Process exited with code 1`
           : `[${new Date().toISOString()}] Process exited with code 0`
@@ -125,9 +125,10 @@ describe("Subagent MCP Server Functionality", () => {
     it("should run a subagent and get an initial status", async () => {
       console.log(`\n--- Running ${testSubagentConfig.name} ---`);
       runId = await runSubagent(
-        testSubagentConfig,
         "Hello from Vitest!",
         process.cwd(),
+        testSubagentConfig.name,
+        "gemini-2.5-flash",
         LOG_DIR
       );
       console.log(
@@ -217,9 +218,10 @@ describe("Subagent MCP Server Functionality", () => {
 
       // Start the subagent
       const runId = await runSubagent(
-        customSubagentConfig,
         "Preserve status test input",
         process.cwd(),
+        customSubagentConfig.name,
+        "gemini-2.5-flash",
         LOG_DIR
       );
       const metaFile = path.join(LOG_DIR, `${runId}.meta.json`);
@@ -241,9 +243,10 @@ describe("Subagent MCP Server Functionality", () => {
 
       // Repeat for 'error' status
       const runId2 = await runSubagent(
-        customSubagentConfig,
         "Preserve error status test input",
         process.cwd(),
+        customSubagentConfig.name,
+        "gemini-2.5-flash",
         LOG_DIR
       );
       const metaFile2 = path.join(LOG_DIR, `${runId2}.meta.json`);
@@ -260,9 +263,10 @@ describe("Subagent MCP Server Functionality", () => {
         `\n--- Running failing subagent ${testFailSubagentConfig.name} ---`
       );
       failRunId = await runSubagent(
-        testFailSubagentConfig,
         "TestFailureInput",
         process.cwd(),
+        testFailSubagentConfig.name,
+        "gemini-2.5-flash",
         LOG_DIR
       );
       console.log(

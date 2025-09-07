@@ -46,19 +46,52 @@ Or if you installed it locally:
 }
 ```
 
+## Project Setup
+
+To use subagents in your project:
+
+1. Create a `.gemini/subagents/` directory in your project root
+2. For each subagent, create a subdirectory with a `GEMINI.md` file:
+   ```
+   your-project/
+   ├── .gemini/
+   │   └── subagents/
+   │       ├── code-assistant/
+   │       │   └── GEMINI.md
+   │       └── test-specialist/
+   │           └── GEMINI.md
+   └── src/
+   ```
+3. Customize each `GEMINI.md` file with specialized instructions for that subagent
+4. Use the `run_subagent` tool with your project directory path
+
+The server will automatically create missing directories and default `GEMINI.md` files as needed.
+
 ### Available Tools
 
 #### Sub-agent Execution Tools
 
-- `run_subagent_q`: Run a query through the Amazon Q CLI
+- `run_subagent`: Execute a project-specific subagent with custom configuration
 
-  - Parameters: `input` (string) - The query to send to Amazon Q
+  - Parameters:
+    - `input` (string) - The task or prompt to send to the subagent
+    - `project_directory` (string) - Absolute path to the main project root directory
+    - `subagent_name` (string) - Name of the subagent to execute (e.g., 'code-assistant', 'test-specialist')
+    - `model` (string, optional) - Gemini model to use (defaults to 'gemini-2.5-flash')
   - Returns: A run ID that can be used to check the status or get logs
 
-- `run_subagent_claude`: Run a query through the Claude CLI
-
-  - Parameters: `input` (string) - The query to send to Claude
-  - Returns: A run ID that can be used to check the status or get logs
+Example usage:
+```json
+{
+  "name": "run_subagent",
+  "arguments": {
+    "input": "Help me write unit tests for the UserService class",
+    "project_directory": "/path/to/your/project",
+    "subagent_name": "test-specialist", 
+    "model": "gemini-2.5-flash"
+  }
+}
+```
 
 - `check_subagent_status`: Check the status of a previous run
 

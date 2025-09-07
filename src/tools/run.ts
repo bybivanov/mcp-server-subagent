@@ -3,18 +3,65 @@ import { join } from "path";
 import { spawn } from "child_process";
 import { createWriteStream } from "fs";
 import { v4 as uuidv4 } from "uuid";
-import { SubagentConfig } from "./schemas.js"; // Import SubagentConfig
 import { ensureSubagentDirectory, validateGeminiPromptFile } from "./subagentDirectory.js";
+
+// Dynamic directory resolution for project-specific subagents
+async function resolveSubagentDirectory(
+  projectDirectory: string,
+  subagentName: string
+): Promise<string> {
+  const subagentDir = join(projectDirectory, '.gemini', 'subagents', subagentName);
+  
+  // Ensure directory exists
+  await ensureSubagentDirectory(subagentDir);
+  
+  // Create default GEMINI.md if missing
+  const geminiFile = join(subagentDir, 'GEMINI.md');
+  if (!await validateGeminiPromptFile(subagentDir)) {
+    await createDefaultGeminiMd(geminiFile, subagentName);
+  }
+  
+  return subagentDir;
+}
+
+// Create default GEMINI.md files for new subagents
+async function createDefaultGeminiMd(
+  filePath: string,
+  subagentName: string
+): Promise<void> {
+  const defaultContent = `# ${subagentName} Subagent
+
+You are a specialized AI assistant focused on ${subagentName.replace(/-/g, ' ')} tasks.
+
+## Your Role
+- Provide expert assistance with ${subagentName.replace(/-/g, ' ')}-related tasks
+- Follow best practices and industry standards
+- Give clear, actionable guidance
+- Be concise but comprehensive
+
+## Approach
+1. Understand the specific requirements
+2. Analyze the current context and codebase
+3. Provide targeted solutions
+4. Include examples where helpful
+5. Suggest next steps or improvements
+
+Focus on delivering high-quality results that align with the project's goals and conventions.
+`;
+  await fs.writeFile(filePath, defaultContent, 'utf8');
+  console.error(`Created default GEMINI.md for ${subagentName} at ${filePath}`);
+}
 
 // Run a subagent and return the run ID
 export async function runSubagent(
-  subagent: SubagentConfig, // Use SubagentConfig type
   input: string,
-  cwd: string,
-  logDir: string,
+  projectDirectory: string, 
+  subagentName: string,
+  model: string,
+  logDir: string
 ): Promise<string> {
-  if (!subagent) {
-    throw new Error(`Subagent configuration is missing.`);
+  if (!subagentName || !projectDirectory || !model) {
+    throw new Error(`Missing required parameters: subagentName, projectDirectory, or model.`);
   }
 
   const runId = uuidv4();
@@ -23,29 +70,9 @@ export async function runSubagent(
   const promptFile = join(logDir, `${runId}.prompt.md`);
 
   // Determine the working directory for the subagent
-  let subagentWorkingDir = cwd; // Default fallback to original cwd
+  const subagentWorkingDir = await resolveSubagentDirectory(projectDirectory, subagentName);
   
-  if (subagent.subagentDirectory) {
-    try {
-      // Ensure the subagent directory exists
-      console.error(`Setting up subagent directory: ${subagent.subagentDirectory}`);
-      subagentWorkingDir = await ensureSubagentDirectory(subagent.subagentDirectory);
-      
-      // Validate GEMINI.md file exists (log warning if missing, but continue)
-      const hasGeminiFile = await validateGeminiPromptFile(subagent.subagentDirectory);
-      if (!hasGeminiFile) {
-        console.error(`Warning: GEMINI.md file not found in ${subagent.subagentDirectory}. Subagent will run with default Gemini behavior.`);
-      }
-      
-      console.error(`Subagent ${subagent.name} will execute from directory: ${subagentWorkingDir}`);
-    } catch (error) {
-      console.error(`Failed to setup subagent directory ${subagent.subagentDirectory}: ${error}`);
-      console.error(`Falling back to original working directory: ${cwd}`);
-      // Continue with original cwd as fallback
-    }
-  } else {
-    console.error(`No subagentDirectory specified for ${subagent.name}, using default working directory: ${cwd}`);
-  }
+  console.error(`Subagent ${subagentName} will execute from directory: ${subagentWorkingDir}`);
 
   // Construct the prompt
   const toolName = "update_subagent_status";
@@ -68,8 +95,11 @@ Instructions are the following:
   await fs.writeFile(promptFile, fullInput);
 
   // Get command and arguments (no input as CLI arg)
-  const command = subagent.command;
-  const args = subagent.getArgs();
+  const command = "gemini";
+  const args = [
+    "--model", model,
+    "--include-directories", projectDirectory
+  ];
 
   // Prepare shell pipeline: cat <promptFile> | <command> <args...>
   // Use cross-platform shell command
@@ -86,7 +116,7 @@ Instructions are the following:
   // Write initial metadata, now including agentName
   const metadata = {
     runId,
-    agentName: subagent.name,
+    agentName: subagentName,
     command: `${catCommand} "${promptFile}" | ${command} ${args.join(" ")}`,
     startTime: new Date().toISOString(),
     status: "running",
@@ -117,9 +147,7 @@ Instructions are the following:
 
     // Log timestamp at the beginning
     logStream.write(
-      `[${new Date().toISOString()}] Starting ${
-        subagent.name
-      } with input: ${input}\n`,
+      `[${new Date().toISOString()}] Starting ${subagentName} with input: ${input}\n`,
     );
     logStream.write(
       `[${new Date().toISOString()}] Working directory: ${subagentWorkingDir}\n`,
@@ -226,7 +254,7 @@ Instructions are the following:
     } catch (cleanupErr) {
       // ignore
     }
-    console.error(`Error executing subagent ${subagent.name}:`, error);
+    console.error(`Error executing subagent ${subagentName}:`, error);
     throw error;
   }
 }

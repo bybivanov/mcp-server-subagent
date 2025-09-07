@@ -18,7 +18,7 @@ This MCP server enables a planning agent to delegate tasks to CLI-based executor
 - **Main Logic**: `src/index.ts` orchestrates sub-agent definitions and serves as the main entry point. MCP tool handlers and core functions for process spawning, logging, status management, and their related schemas are now modularized under `src/tools/` (see `src/tools/run.ts`, `src/tools/status.ts`, `src/tools/logs.ts`, `src/tools/schemas.ts`, and the bi-directional communication tools in `src/tools/askParent.ts`, `src/tools/replySubagent.ts`, `src/tools/checkMessage.ts`).
 - **Execution**: Spawns sub-agents as child processes. Stdout/stderr are logged to timestamped files in `logs/`. A `.meta.json` file per run tracks ID, command, status, times, exit code, and a summary. The metadata file also stores bi-directional communication messages with statuses like "waiting_parent_reply", "parent_replied", and "acknowledged_by_subagent".
 - **Key MCP Tools Exposed**:
-  - `run_subagent_<name>`: Starts a sub-agent.
+  - `run_subagent`: Delegates tasks to project-specific subagents.
   - `check_subagent_status`: Gets run metadata (including status & summary) for a given run. Requires only `runId`.
   - `get_subagent_logs`: Retrieves raw logs for a given run. Requires only `runId`.
   - `update_subagent_status`: Allows external updates to status and summary for a given run. Requires `runId` and `status`.
@@ -46,7 +46,7 @@ The server implements a message passing system that allows sub-agents to ask que
   - Tests directly call exported functions from `src/index.ts` (or more commonly, the refactored tool functions from `src/tools/*.ts` directly).
   - Comprehensive bi-directional communication tests in `src/communication.spec.ts` cover the full ask→reply→check cycle, message state transitions, and edge cases.
 - **Local Run**: `npm start` (or `npm run dev` for watch mode).
-- **Adding Production Sub-agents**: Modify the `SUBAGENTS` object in `src/index.ts`.
+- **Adding Project Sub-agents**: Create specialized `GEMINI.md` files in project-specific `.gemini/subagents/` directories.
 
 ### Task Completion & Testing
 

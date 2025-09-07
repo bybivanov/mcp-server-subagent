@@ -81,19 +81,19 @@ describe("End-to-End Gemini Subagent Integration Tests", () => {
 
   beforeEach(() => {
     // Mock the runSubagent function for integration tests
-    vi.spyOn(runModule, 'runSubagent').mockImplementation(async (config, input, cwd, logDir) => {
+    vi.spyOn(runModule, 'runSubagent').mockImplementation(async (input, projectDirectory, subagentName, model, logDir) => {
       const mockRunId = uuidv4();
       
-      // Determine behavior based on config name and input
-      const shouldFail = config.name.includes("failing") || config.getArgs().some(arg => arg.includes("non-existent"));
+      // Determine behavior based on subagent name and input
+      const shouldFail = subagentName.includes("failing") || input.includes("fail");
       const status = shouldFail ? "error" : "success";
       const exitCode = shouldFail ? 1 : 0;
       
       // Create mock metadata file
       const metadata = {
         runId: mockRunId,
-        agentName: config.name,
-        command: `type "prompt.md" | ${config.command} ${config.getArgs().join(" ")}`,
+        agentName: subagentName,
+        command: `type "prompt.md" | gemini --model ${model} --include-directories ${projectDirectory}`,
         startTime: new Date().toISOString(),
         status,
         exitCode,
@@ -108,13 +108,12 @@ describe("End-to-End Gemini Subagent Integration Tests", () => {
       );
       
       // Create mock log file with working directory info
-      const workingDir = config.subagentDirectory ? 
-        path.resolve(config.subagentDirectory) : cwd;
+      const workingDir = projectDirectory;
       
       const logContent = [
-        `[${new Date().toISOString()}] Starting ${config.name} with input: ${input}`,
+        `[${new Date().toISOString()}] Starting ${subagentName} with input: ${input}`,
         `[${new Date().toISOString()}] Working directory: ${workingDir}`,
-        `[${new Date().toISOString()}] Command: type "prompt.md" | ${config.command} ${config.getArgs().join(" ")}`,
+        `[${new Date().toISOString()}] Command: type "prompt.md" | gemini --model ${model} --include-directories ${projectDirectory}`,
         shouldFail 
           ? `[${new Date().toISOString()}] Process exited with code 1`
           : `[${new Date().toISOString()}] Process exited with code 0`
@@ -186,9 +185,10 @@ describe("End-to-End Gemini Subagent Integration Tests", () => {
   describe("End-to-End Subagent Execution from Dedicated Directories", () => {
     it("should execute subagent from its dedicated directory with GEMINI.md", async () => {
       const runId = await runSubagent(
-        testSubagentConfig,
         "Test execution from dedicated directory",
         process.cwd(),
+        testSubagentConfig.name,
+        "gemini-2.5-flash",
         TEST_LOG_DIR
       );
 
@@ -213,9 +213,10 @@ describe("End-to-End Gemini Subagent Integration Tests", () => {
 
     it("should execute subagent and log warning when GEMINI.md is missing", async () => {
       const runId = await runSubagent(
-        testSubagentWithoutGeminiConfig,
         "Test execution without GEMINI.md",
         process.cwd(),
+        testSubagentWithoutGeminiConfig.name,
+        "gemini-2.5-flash",
         TEST_LOG_DIR
       );
 
@@ -238,9 +239,10 @@ describe("End-to-End Gemini Subagent Integration Tests", () => {
 
     it("should fallback to original working directory when subagent directory setup fails", async () => {
       const runId = await runSubagent(
-        testSubagentMissingDirConfig,
         "Test fallback to original directory",
         process.cwd(),
+        testSubagentMissingDirConfig.name,
+        "gemini-2.5-flash",
         TEST_LOG_DIR
       );
 
@@ -265,9 +267,10 @@ describe("End-to-End Gemini Subagent Integration Tests", () => {
     it("should support complete ask -> reply -> check cycle with Gemini subagent", async () => {
       // Start a subagent
       const runId = await runSubagent(
-        testSubagentConfig,
         "Please ask me a question using ask_parent tool",
         process.cwd(),
+        testSubagentConfig.name,
+        "gemini-2.5-flash",
         TEST_LOG_DIR
       );
 
@@ -332,9 +335,10 @@ describe("End-to-End Gemini Subagent Integration Tests", () => {
 
     it("should handle multiple questions and replies in sequence", async () => {
       const runId = await runSubagent(
-        testSubagentConfig,
         "Test multiple questions scenario",
         process.cwd(),
+        testSubagentConfig.name,
+        "gemini-2.5-flash",
         TEST_LOG_DIR
       );
 
@@ -395,9 +399,10 @@ describe("End-to-End Gemini Subagent Integration Tests", () => {
 
       // This should not throw, but should handle the error gracefully
       const runId = await runSubagent(
-        config,
         "Test with missing directory",
         process.cwd(),
+        config.name,
+        "gemini-2.5-flash",
         TEST_LOG_DIR
       );
 
@@ -415,9 +420,10 @@ describe("End-to-End Gemini Subagent Integration Tests", () => {
 
     it("should handle invalid message IDs in communication", async () => {
       const runId = await runSubagent(
-        testSubagentConfig,
         "Test invalid message handling",
         process.cwd(),
+        testSubagentConfig.name,
+        "gemini-2.5-flash",
         TEST_LOG_DIR
       );
 
@@ -475,9 +481,10 @@ describe("End-to-End Gemini Subagent Integration Tests", () => {
       };
 
       const runId = await runModule.runSubagent(
-        failingConfig,
         "This should fail",
         process.cwd(),
+        failingConfig.name,
+        "gemini-2.5-flash",
         TEST_LOG_DIR
       );
 
@@ -528,9 +535,10 @@ Remember to always update your status when completing tasks.
 
     it("should execute subagent from directory containing GEMINI.md", async () => {
       const runId = await runSubagent(
-        testSubagentConfig,
         "Verify GEMINI.md is accessible",
         process.cwd(),
+        testSubagentConfig.name,
+        "gemini-2.5-flash",
         TEST_LOG_DIR
       );
 

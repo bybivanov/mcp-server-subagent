@@ -15,7 +15,6 @@ import {
   CheckSubagentStatusArgumentsSchema,
   GetSubagentLogsArgumentsSchema,
   UpdateSubagentStatusArgumentsSchema,
-  SubagentConfig,
   CommunicationMessage,
 } from "./tools/schemas.js";
 import { runSubagent } from "./tools/run.js";
@@ -61,34 +60,7 @@ export const mcpConfig = {
   },
 };
 
-// Define the subagent configuration
-export const SUBAGENTS: Record<string, SubagentConfig> = {
-  "code-assistant": {
-    name: "code-assistant",
-    command: "gemini",
-    getArgs: () => ["chat", "--interactive"],
-    description: "A general-purpose coding assistant powered by Gemini. Excels at code generation, debugging, refactoring, and explaining complex programming concepts. Ideal for general development tasks, code reviews, and technical problem-solving.",
-    subagentDirectory: "subagents/code-assistant",
-    specialization: "General coding and development tasks"
-  },
-  "test-specialist": {
-    name: "test-specialist", 
-    command: "gemini",
-    getArgs: () => ["chat", "--interactive"],
-    description: "A testing specialist powered by Gemini. Focuses on writing comprehensive test suites, test-driven development, mocking strategies, and testing best practices. Perfect for creating unit tests, integration tests, and test automation.",
-    subagentDirectory: "subagents/test-specialist",
-    specialization: "Testing and test automation"
-  },
-  "documentation-writer": {
-    name: "documentation-writer",
-    command: "gemini",
-    getArgs: () => ["chat", "--interactive"],
-    description: "A documentation specialist powered by Gemini. Specializes in creating clear, comprehensive documentation, API docs, README files, and technical writing. Excellent for improving code documentation and creating user guides.",
-    subagentDirectory: "subagents/documentation-writer",
-    specialization: "Documentation and technical writing"
-  }
-  // test and test_fail agents will be removed from here and added in tests
-};
+// REMOVED: Hardcoded SUBAGENTS object - now using project-specific subagents
 
 // Create server instance
 const server = new Server(
@@ -107,33 +79,36 @@ const server = new Server(
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   const tools = [];
 
-  // Add run tools for each subagent
-  for (const subagent of Object.values(SUBAGENTS)) {
-    // Exclude the 'test' subagent from being exposed
-    if (subagent.name === "test") {
-      continue;
-    }
-
-    tools.push({
-      name: `run_subagent_${subagent.name}`,
-      description: `Delegates the given task to a ${subagent.name} subagent as an asynchronous sub-task. This creates a new agent instance that will handle the provided input independently and report back its results. The task can be short or long-running. Use check_subagent_status with the returned runId to monitor progress, as completion may take some time.\nSynonyms: Run subtask, run sub-agent, delegate task, delegate sub-task.\n${subagent.description}`,
-      inputSchema: {
-        type: "object",
-        properties: {
-          input: {
-            type: "string",
-            description: "Input to send to the subagent",
-          },
-          cwd: {
-            type: "string",
-            description:
-              "Working directory path (project root) where the subagent should be executed. Set this to the current working directory, or the current project root, usually the directory with the .git/ folder.",
-          },
+  // REMOVED: Dynamic tool generation for hardcoded subagents
+  // Now using single run_subagent tool with project-specific configuration
+  
+  // Add single run_subagent tool
+  tools.push({
+    name: "run_subagent",
+    description: "Execute a project-specific subagent. The subagent will be created in {project_directory}/.gemini/subagents/{subagent_name}/ if it doesn't exist. The subagent runs from its own directory but has access to the full project via --include-directories.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        input: {
+          type: "string",
+          description: "Task or prompt to send to the subagent"
         },
-        required: ["input", "cwd"],
+        project_directory: {
+          type: "string", 
+          description: "Absolute path to the main project root directory where .gemini/subagents/ should be located"
+        },
+        subagent_name: {
+          type: "string",
+          description: "Name of the subagent to execute (e.g., 'code-assistant', 'test-specialist')"
+        },
+        model: {
+          type: "string",
+          description: "Gemini model to use (defaults to 'gemini-2.5-flash')"
+        }
       },
-    });
-  }
+      required: ["input", "project_directory", "subagent_name"]
+    }
+  });
 
   // Add generic status check tool
   tools.push({
@@ -302,23 +277,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
 
   try {
-    // Handle run_subagent_* tools
-    if (name.startsWith("run_subagent_")) {
-      const subagentName = name.replace("run_subagent_", "");
-      const subagentConfig = SUBAGENTS[subagentName];
-      if (!subagentConfig) {
-        throw new Error(`Unknown subagent: ${subagentName}`);
-      }
-      const { input, cwd } = RunSubagentArgumentsSchema.parse(args);
-
+    // REMOVED: Hardcoded run_subagent_* tool handling
+    // Now handled by single run_subagent tool
+    
+    // Handle run_subagent tool
+    if (name === "run_subagent") {
+      const { input, project_directory, subagent_name, model } = RunSubagentArgumentsSchema.parse(args);
+      
       await ensureLogDir();
-      const runId = await runSubagent(subagentConfig, input, cwd, LOG_DIR);
-
+      const runId = await runSubagent(input, project_directory, subagent_name, model || "gemini-2.5-flash", LOG_DIR);
+      
       return {
         content: [
           {
             type: "text",
-            text: `Subagent ${subagentConfig.name} started in directory ${cwd} with run ID: ${runId}.\n\nUse check_subagent_status to check the status. As this task can take a while, periodically check status in 30 second intervals or similar (use "sleep 30").`,
+            text: `Subagent ${subagent_name} started in project ${project_directory} with run ID: ${runId}.\n\nUse check_subagent_status to check the status. As this task can take a while, periodically check status in 30 second intervals or similar (use "sleep 30").`,
           },
         ],
       };

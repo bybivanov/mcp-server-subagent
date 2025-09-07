@@ -20,7 +20,9 @@ export const SubagentConfigSchema = z.object({
 
 export const RunSubagentArgumentsSchema = z.object({
   input: z.string().min(1, "Input cannot be empty"),
-  cwd: z.string().min(1, "Working directory path cannot be empty"),
+  project_directory: z.string().min(1, "Main agent project directory path"),
+  subagent_name: z.string().min(1, "Name of the subagent to execute"),
+  model: z.string().optional().default("gemini-2.5-flash")
 });
 
 export const CheckSubagentStatusArgumentsSchema = z.object({

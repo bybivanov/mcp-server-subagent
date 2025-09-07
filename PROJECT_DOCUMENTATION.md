@@ -131,24 +131,20 @@ Runtime-generated directory containing:
 
 ### Sub-agent Management
 
-The server supports multiple sub-agent types defined in the `SUBAGENTS` configuration:
+The MCP server provides a `run_subagent` tool that creates and manages project-specific subagents in `.gemini/subagents/` directories:
 
-#### Amazon Q Sub-agent (`q`)
-- **Command:** `q chat --trust-all-tools --no-interactive`
-- **Purpose:** Execute queries through Amazon Q CLI
-- **Use Case:** AI-powered development assistance
-
-#### Claude Sub-agent (`claude`)
-- **Command:** `claude --print --verbose --output-format stream-json --allowedTools <tools> --mcp-config <config>`
-- **Purpose:** Execute queries through Claude CLI
-- **Use Case:** AI-powered code generation and analysis
-- **Special Features:** Includes MCP configuration for recursive sub-agent calls
+#### Project-Specific Subagents
+- **Command:** `gemini --model <model> --include-directories <project_directory>`
+- **Purpose:** Execute specialized tasks using Gemini CLI with project context
+- **Configuration:** Each subagent has its own `GEMINI.md` file with specialized instructions
+- **Working Directory:** Subagents execute from `.gemini/subagents/<name>/` within the project
+- **Project Access:** Full project context available via `--include-directories` argument
 
 ### MCP Tools Exposed
 
 #### Execution Tools
-1. **`run_subagent_<name>`** - Start a sub-agent execution
-   - Parameters: `input` (string), `cwd` (string)
+1. **`run_subagent`** - Start a project-specific sub-agent execution
+   - Parameters: `input` (string), `project_directory` (string), `subagent_name` (string), `model` (string, optional)
    - Returns: Run ID for status tracking
    - Creates asynchronous sub-task with independent execution
 
@@ -255,20 +251,33 @@ npm test
 # Tests must pass before any development task is considered complete
 ```
 
-### Adding New Sub-agents
-Modify the `SUBAGENTS` object in `src/index.ts`:
+### Adding New Project Sub-agents
+Create specialized `GEMINI.md` files in your project's `.gemini/subagents/` directory:
 
-```typescript
-const SUBAGENTS = {
-  // ... existing agents
-  newagent: {
-    name: "newagent",
-    command: "your-command",
-    getArgs: () => ["--flag1", "--flag2"],
-    description: "Description of your new agent",
-  },
-};
+```bash
+# Create a new subagent directory
+mkdir -p .gemini/subagents/my-specialist
+
+# Create custom instructions file
+cat > .gemini/subagents/my-specialist/GEMINI.md << 'EOF'
+# My Specialist Subagent
+
+You are a specialized AI assistant focused on my specialist tasks.
+
+## Your Role
+- Provide expert assistance with specific domain tasks
+- Follow project conventions and best practices
+- Give clear, actionable guidance
+
+## Approach
+1. Understand the specific requirements
+2. Analyze the current context and codebase  
+3. Provide targeted solutions
+4. Include examples where helpful
+EOF
 ```
+
+The server will automatically use these custom instructions when the subagent is executed.
 
 ## Installation and Usage
 
