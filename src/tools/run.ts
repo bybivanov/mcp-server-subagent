@@ -97,18 +97,19 @@ Instructions are the following:
   // Get command and arguments (no input as CLI arg)
   const command = "gemini";
   const args = [
+    "--yolo",
     "--model", model,
-    "--include-directories", projectDirectory
+    "--include-directories", projectDirectory,
+    "--prompt \"", fullInput, "\""
   ];
 
   // Prepare shell pipeline: cat <promptFile> | <command> <args...>
   // Use cross-platform shell command
   const isWindows = process.platform === 'win32';
   const shellCommand = isWindows ? "cmd" : "sh";
-  const catCommand = isWindows ? "type" : "cat";
   const shellArgs = isWindows 
-    ? ["/c", `${catCommand} "${promptFile}" | ${command} ${args.join(" ")}`]
-    : ["-c", `${catCommand} "${promptFile}" | ${command} ${args.map((a) => `"${a.replace(/"/g, '\\"')}"`).join(" ")}`];
+    ? ["/c", `${command} ${args.join(" ")}`]
+    : ["-c", `${command} ${args.map((a) => `"${a.replace(/"/g, '\\"')}"`).join(" ")}`];
 
   // Create log file stream for real-time logging
   const logStream = createWriteStream(logFile, { flags: "a" });
@@ -117,7 +118,7 @@ Instructions are the following:
   const metadata = {
     runId,
     agentName: subagentName,
-    command: `${catCommand} "${promptFile}" | ${command} ${args.join(" ")}`,
+    command: `${command} ${args.join(" ")}`,
     startTime: new Date().toISOString(),
     status: "running",
     exitCode: null,
@@ -130,7 +131,7 @@ Instructions are the following:
   try {
     // Log the command being executed (for debugging)
     console.error(
-      `Executing: ${catCommand} "${promptFile}" | ${command} ${args.join(" ")}`,
+      `Executing: ${command} ${args.join(" ")}`,
     );
     console.error(`Working directory: ${subagentWorkingDir}`);
 
@@ -153,7 +154,7 @@ Instructions are the following:
       `[${new Date().toISOString()}] Working directory: ${subagentWorkingDir}\n`,
     );
     logStream.write(
-      `[${new Date().toISOString()}] Command: ${catCommand} "${promptFile}" | ${command} ${args.join(
+      `[${new Date().toISOString()}] Command: ${command} ${args.join(
         " ",
       )}\n`,
     );
