@@ -277,9 +277,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
 
   try {
-    // REMOVED: Hardcoded run_subagent_* tool handling
-    // Now handled by single run_subagent tool
-    
     // Handle run_subagent tool
     if (name === "run_subagent") {
       const { input, project_directory, subagent_name, model } = RunSubagentArgumentsSchema.parse(args);

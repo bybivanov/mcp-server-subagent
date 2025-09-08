@@ -11,16 +11,16 @@ async function resolveSubagentDirectory(
   subagentName: string
 ): Promise<string> {
   const subagentDir = join(projectDirectory, '.gemini', 'subagents', subagentName);
-  
+
   // Ensure directory exists
   await ensureSubagentDirectory(subagentDir);
-  
+
   // Create default GEMINI.md if missing
   const geminiFile = join(subagentDir, 'GEMINI.md');
   if (!await validateGeminiPromptFile(subagentDir)) {
     await createDefaultGeminiMd(geminiFile, subagentName);
   }
-  
+
   return subagentDir;
 }
 
@@ -55,7 +55,7 @@ Focus on delivering high-quality results that align with the project's goals and
 // Run a subagent and return the run ID
 export async function runSubagent(
   input: string,
-  projectDirectory: string, 
+  projectDirectory: string,
   subagentName: string,
   model: string,
   logDir: string
@@ -71,45 +71,30 @@ export async function runSubagent(
 
   // Determine the working directory for the subagent
   const subagentWorkingDir = await resolveSubagentDirectory(projectDirectory, subagentName);
-  
+
   console.error(`Subagent ${subagentName} will execute from directory: ${subagentWorkingDir}`);
 
   // Construct the prompt
   const toolName = "update_subagent_status";
-  const prompt = `
-This is a sub-task executed by an automated agent.
-Your unique run ID for this task is: ${runId}.
-You MUST report your final status and results using the MCP tool: ${toolName}.
-Ensure all necessary information is included in your update via this tool.
-
-You are able to ask the commander/manager for clarification if something is unclear using the 'ask_parent' tool.
-
-If you are unable to complete the task, please provide a detailed error as summary in the tool call ${toolName} and set the status to 'error'.
-
-Instructions are the following:
----
-`;
-  const fullInput = prompt + input;
+  const prompt = `This is a sub-task executed by an automated agent. Your unique run ID for this task is: ${runId}. You MUST report your final status and results using the MCP tool: ${toolName}. Ensure all necessary information is included in your update via this tool. **IMPORTANT** If you have any questions or need additional clarification you have to use 'ask_parent' tool.  If you are unable to complete the task, please provide a detailed error as summary in the tool call ${toolName} and set the status to 'error'. Your task is the following:`;
+  const fullInput = prompt.concat(input);
 
   // Write prompt to file
   await fs.writeFile(promptFile, fullInput);
 
   // Get command and arguments (no input as CLI arg)
   const command = "gemini";
-  const args = [
+  
+  const isWindows = process.platform === 'win32';
+  const shellCommand = isWindows ? "cmd" : "sh";
+  const shellArgs = [
+    isWindows ? "/c" : "-c",
+    command,
     "--yolo",
     "--model", model,
     "--include-directories", projectDirectory,
-    "--prompt \"", fullInput, "\""
+    `--prompt`, fullInput
   ];
-
-  // Prepare shell pipeline: cat <promptFile> | <command> <args...>
-  // Use cross-platform shell command
-  const isWindows = process.platform === 'win32';
-  const shellCommand = isWindows ? "cmd" : "sh";
-  const shellArgs = isWindows 
-    ? ["/c", `${command} ${args.join(" ")}`]
-    : ["-c", `${command} ${args.map((a) => `"${a.replace(/"/g, '\\"')}"`).join(" ")}`];
 
   // Create log file stream for real-time logging
   const logStream = createWriteStream(logFile, { flags: "a" });
@@ -118,7 +103,7 @@ Instructions are the following:
   const metadata = {
     runId,
     agentName: subagentName,
-    command: `${command} ${args.join(" ")}`,
+    command: `${shellCommand} ${shellArgs.join(" ")}`,
     startTime: new Date().toISOString(),
     status: "running",
     exitCode: null,
@@ -131,7 +116,7 @@ Instructions are the following:
   try {
     // Log the command being executed (for debugging)
     console.error(
-      `Executing: ${command} ${args.join(" ")}`,
+      `Executing: ${shellCommand} ${shellArgs.join(" ")}`,
     );
     console.error(`Working directory: ${subagentWorkingDir}`);
 
@@ -154,7 +139,7 @@ Instructions are the following:
       `[${new Date().toISOString()}] Working directory: ${subagentWorkingDir}\n`,
     );
     logStream.write(
-      `[${new Date().toISOString()}] Command: ${command} ${args.join(
+      `[${new Date().toISOString()}] Command: ${shellCommand} ${shellArgs.join(
         " ",
       )}\n`,
     );

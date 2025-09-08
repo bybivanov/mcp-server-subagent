@@ -1,7 +1,5 @@
 import { promises as fs } from "fs";
 import { join } from "path";
-import { createWriteStream } from "fs";
-import type { CommunicationMessage } from "./schemas.js";
 
 export async function checkSubagentStatus(
   runId: string,
