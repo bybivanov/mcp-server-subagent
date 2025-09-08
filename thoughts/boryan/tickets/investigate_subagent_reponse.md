@@ -1,0 +1,5 @@
+# Issues
+- Main-agent runs sub-agents in parallel and they finish with no response. The log files of the runs suggest that the command used to spawn the sub-agents is correct and has all the necessary instructions for the sub-agent to complete the task and return a summary, but the end result after they update their status to success (finished) the summary is `null`.
+
+# Enhancement Opportunity
+- We have to research whether there's a more optimal way to return the results of the sub-agents to the main-agent instead of the main-agent having to constantly evoke `check_subagent_status` function. If the main-agent runs the sub-agents in parallel, I'm wondering whether the sub-agent can return the result to the main-agent as an asynchronous response when it successfully finishes the task and updates its status, and if we can maybe we can remove the `check_subagent_status` function. The log files should still remain for debugging purposes, but we have to remove the use and creation of prompt file (*.prompt.md) as we're directly passing the prompt to the command.
